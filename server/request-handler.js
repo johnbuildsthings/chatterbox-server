@@ -1,14 +1,7 @@
 var utils = require('./utils');
 var fs = require('fs');
-
-var DB = {results: [
-  {
-    username: 'jim',
-    roomname: 'lobby',
-    text: 'this is a test',
-    objectId: 1
-  },
-]};
+var jsonFile = require('jsonfile');
+var staging = {results: []};
 
 var Message = function(obj){
   this.username = obj.username;
@@ -21,15 +14,21 @@ objectId = 1;
 
 actions = {
   'GET': function(request, response){
-    utils.sendResponse(response, DB);
+    jsonFile.readFile('./server/data.json', function(err, obj){
+      staging = obj;
+    });
+    utils.sendResponse(response, staging);
   },
   'POST': function(request, response){
     utils.collectData(request, function(data){
-      // console.log(data);
       var message = new Message(JSON.parse(data));
       message.objectId = ++objectId;
-      DB.results.push(message);
-      fs.writeFile('./data.json', message, 'utf8', function(err){console.log(err)});
+      var current  = jsonFile.readFile('./server/data.json', function(err, obj){
+        staging.results.push(obj);
+      });
+      staging.results.unshift(message);
+
+      jsonFile.writeFile('./server/data.json', staging);
     });
     utils.sendResponse(response, 201);
   },
@@ -41,7 +40,7 @@ actions = {
 module.exports = function(request, response) {
   // console.log("Serving request type " + request.method + " for url " + request.url);
 
-  
+  jsonFile.writeFileSync('./data.json', {test: 'test'});
   
   var resp = actions[request.method];
   // console.log(resp);
